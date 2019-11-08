@@ -1,4 +1,4 @@
-module github.com/egeneralov/mikrotik-exporter
+module github.com/nshttpd/mikrotik-exporter
 
 go 1.12
 
