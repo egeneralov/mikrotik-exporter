@@ -1,10 +1,30 @@
-FROM debian:9.9-slim
+FROM golang:1.13-alpine
 
-EXPOSE 9436
+RUN apk add --no-cache ca-certificates
 
-COPY scripts/start.sh /app/
-COPY dist/mikrotik-exporter_linux_amd64 /app/mikrotik-exporter
+ENV \
+  GO111MODULE=on \
+  CGO_ENABLED=0 \
+  GOOS=linux \
+  GOARCH=amd64
 
-RUN chmod 755 /app/*
+WORKDIR /go/src/github.com/nshttpd/mikrotik-exporter
+ADD go.mod go.sum /go/src/github.com/nshttpd/mikrotik-exporter/
+RUN go mod download
 
-ENTRYPOINT ["/app/start.sh"]
+ADD . .
+
+RUN \
+  go build -v -installsuffix cgo -ldflags="-w -s" -o /go/bin/mikrotik-exporter .
+
+
+FROM alpine:3.10
+
+RUN apk add --no-cache ca-certificates
+COPY --from=0 /go/bin /go/bin
+
+USER nobody
+# ENTRYPOINT ["/go/bin/universal-exporter"]
+EXPOSE 8090
+ENV PATH='/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+CMD /go/bin/mikrotik-exporter
